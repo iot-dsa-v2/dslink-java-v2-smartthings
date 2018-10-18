@@ -1,0 +1,23 @@
+{
+  "name": "dslink-java-v2-smartthings",
+  "version": "1.0.0",
+  "dsa-version": "2.0",
+  "description": "SmartThings Link",
+  "main": "bin/dslink-java-v2-smartthings",
+  "configs": {
+    "handler_class": {
+      "type": "string",
+      "value": "org.iot.dsa.dslink.smartthings.MainNode"
+    },
+    "log": {
+      "desc": "all, trace, debug, fine, warn, info, error, admin, fatal, none",
+      "type": "enum",
+      "value": "debug"
+    },
+    "token": {
+      "desc": "Authentication token for the broker.",
+      "type": "string",
+      "value": null
+    }
+  }
+}
