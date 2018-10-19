@@ -49,9 +49,22 @@ metadata {
 	}
 }
 
+private String makeNetworkId(ipaddr, port) { 
+     String hexIp = ipaddr.tokenize('.').collect { 
+     String.format('%02X', it.toInteger()) 
+     }.join() 
+     String hexPort = String.format('%04X', port.toInteger()) 
+     //log.debug "${hexIp}:${hexPort}"
+     return "${hexIp}:${hexPort}" 
+}
+
 // parse events into attributes
 def parse(String description) {
 	log.debug "Parsing '${description}'"
+    
+    String nid = makeNetworkId(ip, port)
+    device.deviceNetworkId = "$nid"
+    
 	//def msg = parseLanMessage(description)
 	def evt = createEvent(name: "message", value: description)
     log.debug evt
@@ -65,6 +78,9 @@ def deviceNotification(message) {
         log.error "Hub is null, must set the hub in the device settings so we can get local hub IP and port"
         return
     }
+    
+    String nid = makeNetworkId(ip, port)
+    device.deviceNetworkId = "$nid"
         
     //log.debug "Sending '${message}' to device"
     
@@ -111,10 +127,13 @@ def deviceNotification(message) {
     headers.put("Content-Type", "application/json")
 
     def hubAction = new physicalgraph.device.HubAction(
-        method: "PUT",
-        path: params.path,
-        headers: headers,
-        body: params.body
+        [
+            method: "PUT",
+            path: params.path,
+            headers: headers,
+            body: params.body
+        ],
+        "$nid"
     )
     log.debug hubAction
     return hubAction
