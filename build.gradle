@@ -24,6 +24,7 @@ repositories {
 dependencies {
     //implementation 'org.iot-dsa:dslink-v2-websocket:+' //for locally installed sdk
     implementation 'com.github.iot-dsa-v2:sdk-dslink-java-v2:+'
+    compile 'org.eclipse.jetty:jetty-server:+'
 }
 
 applicationDistribution.from(new File(project.projectDir, "/dslink.json"))
