@@ -8,16 +8,27 @@ import javax.servlet.http.HttpServletResponse;
 import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
+import org.iot.dsa.DSRuntime;
 import org.iot.dsa.io.json.JsonReader;
 import org.iot.dsa.io.json.JsonWriter;
 import org.iot.dsa.node.DSIObject;
+import org.iot.dsa.node.DSIValue;
 import org.iot.dsa.node.DSMap;
+import org.iot.dsa.node.DSMap.Entry;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class HubNode extends SmartNode {
     private static final String PARAMS = "parameters";
+    private static final String SUBSCRIBERS = "subscribers";
+    public static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
     
+    private OkHttpClient httpClient = new OkHttpClient();
     private DSMap parameters;
     private Server server;
+    private DSMap subscribers;
     
     public HubNode() {
         
@@ -37,6 +48,13 @@ public class HubNode extends SmartNode {
             }
         } else {
             put(PARAMS, parameters.copy()).setPrivate(true);
+        }
+        
+        DSIObject o = get(SUBSCRIBERS);
+        if (o instanceof DSMap) {
+            this.subscribers = (DSMap) o;
+        } else {
+            this.subscribers  = new DSMap();
         }
     }
     
@@ -62,13 +80,19 @@ public class HubNode extends SmartNode {
         RequestHandler handler = new RequestHandler(this);
         server = new Server(port);
         server.setHandler(handler);
-        try {
-            server.start();
-            server.join();
-        } catch (Exception e) {
-            warn("", e);
-            end();
-        }
+        DSRuntime.run(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    server.start();
+                    server.join();
+                } catch (Exception e) {
+                    warn("", e);
+                    end();
+                }
+            }
+        });
+        
     }
     
     private void end() {
@@ -91,6 +115,18 @@ public class HubNode extends SmartNode {
             DSMap body = reader.getMap();
             reader.close();
             updateTree(target, body);
+        } else if ("SUBSCRIBE".equals(method)) {
+            String callback = request.getHeader("CALLBACK");
+            if (callback != null) {
+                subscribers.put(callback, true);
+                put(SUBSCRIBERS, subscribers.copy()).setReadOnly(true);
+            }
+        } else if ("UNSUBSCRIBE".equals(method)) {
+            String callback = request.getHeader("CALLBACK");
+            if (callback != null) {
+                subscribers.remove(callback);
+                put(SUBSCRIBERS, subscribers.copy()).setReadOnly(true);
+            }
         }
         
         
@@ -103,8 +139,37 @@ public class HubNode extends SmartNode {
         baseRequest.setHandled(true);
     }
     
-//    @Override
-//    protected void updateTree(String target, DSMap body) {
-//        
-//    }
+    public void sendUpdate(SmartValueNode node, DSIValue value) {
+        String path = node.getPath();
+        String rootPath = getPath();
+        if (path.startsWith(rootPath)) {
+            path = path.substring(rootPath.length());
+        }
+        String bodyContent = new DSMap().put("path", path).put("value", value.toElement()).toString();
+        
+        for (Entry entry: subscribers) {
+            String address = entry.getKey();
+            RequestBody body = RequestBody.create(JSON, bodyContent);
+            okhttp3.Request req = new okhttp3.Request.Builder()
+                    .url(address)
+                    .post(body)
+                    .build();
+            try {
+                Response response = httpClient.newCall(req).execute();
+                if (response.code() != 200) {
+                    warn("Non-ok response to update: " + response.code() + " : " + response.message());
+                }
+                response.close();
+            } catch (IOException e) {
+                warn("Error sending update to subscriber: ", e);
+            }
+                   
+            
+        }
+    }
+    
+    @Override
+    protected HubNode getHub() {
+        return this;
+    }
 }

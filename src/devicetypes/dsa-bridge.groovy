@@ -49,6 +49,11 @@ metadata {
 	}
 }
 
+// gets the address of the Hub
+private getCallBackAddress() {
+    return device.hub.getDataValue("localIP") + ":" + device.hub.getDataValue("localSrvPortTCP")
+}
+
 private String makeNetworkId(ipaddr, port) { 
      String hexIp = ipaddr.tokenize('.').collect { 
      String.format('%02X', it.toInteger()) 
@@ -65,8 +70,8 @@ def parse(String description) {
     String nid = makeNetworkId(ip, port)
     device.deviceNetworkId = "$nid"
     
-	//def msg = parseLanMessage(description)
-	def evt = createEvent(name: "message", value: description)
+	def msg = parseLanMessage(description)
+	def evt = createEvent(name: "message", value: msg.body)
     log.debug evt
     return evt
 }
@@ -121,14 +126,16 @@ def deviceNotification(message) {
 //            log.error "something went wrong: $e"
 //        }
 //    }
+	def callback = getCallBackAddress()
     
     def headers = [:]
     headers.put("HOST", "$ip:$port")
     headers.put("Content-Type", "application/json")
+    headers.put("CALLBACK", "http://${callback}")
 
     def hubAction = new physicalgraph.device.HubAction(
         [
-            method: "PUT",
+            method: params.method,
             path: params.path,
             headers: headers,
             body: params.body

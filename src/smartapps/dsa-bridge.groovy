@@ -429,6 +429,9 @@ import groovy.transform.Field
         action: "actionOpenClosed"
     ]
 ]
+
+@Field DEVICE_LIST = []
+
  
 definition(
     name: "DSA Bridge",
@@ -467,88 +470,139 @@ def updated() {
 	log.debug "Updated with settings: ${settings}"
 
 	unsubscribe()
+    unsubscribeBridge()
 	initialize()
 }
 
+def uninstalled() {
+	log.debug "Uninstalled"
+
+	unsubscribeBridge()
+}
+
 def initialize() {
+	settings.each() {
+    	DEVICE_LIST += it.value    
+	}
 	// Subscribe to new events from devices
-    CAPABILITY_MAP.each { key, capability ->
-        capability["attributes"].each { attribute ->
-            subscribe(settings[key], attribute, inputHandler)
+    DEVICE_LIST.each { device ->
+    	def attrs = device.supportedAttributes
+        def body = [:]
+    	attrs.each { attr ->
+        	subscribe(device, attr.name, inputHandler)
+            body.put(attr.name, [
+                '$type' : "string",
+                '$writable' : "write",
+                '?value' : device.currentValue(attr.name)
+            ])
         }
+        def json = new JsonOutput().toJson([
+            path: "/" + device.displayName,
+            body: body
+        ])
+
+        log.debug "Forwarding device to bridge: ${json}"
+        bridge.deviceNotification(json)  
+    }
+    //CAPABILITY_MAP.each { key, capability ->
+     //   capability["attributes"].each { attribute ->
+      //      subscribe(settings[key], attribute, inputHandler)
+     //   }
         
         //Push initial device states
-        settings[key].each {device ->
-            def attrs = device.supportedAttributes
-            def body = [:]
-            attrs.each {attr->
-            	body.put(attr.name, [
-                	'$type' : "string",
-                    '$writable' : "write",
-                    '?value' : device.currentValue(attr.name)
-                ])
-            }
-            def json = new JsonOutput().toJson([
-                path: "/" + device.displayName,
-                body: body
-            ])
+   //     settings[key].each {device ->
+   //         def attrs = device.supportedAttributes
+    //        def body = [:]
+    //        attrs.each {attr->
+    //        	body.put(attr.name, [
+     //           	'$type' : "string",
+     //               '$writable' : "write",
+     //               '?value' : device.currentValue(attr.name)
+      //          ])
+     //       }
+      //      def json = new JsonOutput().toJson([
+      //          path: "/" + device.displayName,
+     //           body: body
+     //       ])
 
-            log.debug "Forwarding device to bridge: ${json}"
-            bridge.deviceNotification(json)
-        }
-    }
+     //       log.debug "Forwarding device to bridge: ${json}"
+      //      bridge.deviceNotification(json)
+       // }
+   // }
 
     // Subscribe to events from the bridge
     subscribe(bridge, "message", bridgeHandler)
     log.debug "subscribed to bridge messages"
 
     // Update the bridge
-    //updateSubscription()
+    subscribeBridge()
     
     //runEvery1Minute(sendGet)
 }
 
-def sendGet() {
-	CAPABILITY_MAP.each { key, capability ->
-        settings[key].each {device ->
-            def attrs = device.supportedAttributes
-            attrs.each {attr->
-            	def json = new JsonOutput().toJson([
-                	path: "/" + device.displayName + "/" + attr.name,
-                	method: "GET"
-            	])
-                log.debug "Polling bridge: ${json}"
-            	bridge.deviceNotification(json)
-            }
-        }
-    }
-}
-
 // Update the bridge"s subscription
-def updateSubscription() {
-    def attributes = [
-        notify: ["Contacts", "System"]
-    ]
-    CAPABILITY_MAP.each { key, capability ->
-        capability["attributes"].each { attribute ->
-            if (!attributes.containsKey(attribute)) {
-                attributes[attribute] = []
-            }
-            settings[key].each {device ->
-                attributes[attribute].push(device.displayName)
-            }
-        }
-    }
+def subscribeBridge() {
     def json = new groovy.json.JsonOutput().toJson([
-        path: "/subscribe",
-        body: [
-            devices: attributes
-        ]
+        path: "/",
+        method: "SUBSCRIBE",
+        body: ""
     ])
 
-    //log.debug "Updating subscription: ${json}"
+    log.debug "Subscribing to DSA: ${json}"
 
-    //bridge.deviceNotification(json)
+	subscribe(location, null, lanResponseHandler, [filterEvents:false])
+    bridge.deviceNotification(json)
+}
+
+def unsubscribeBridge() {
+	def json = new groovy.json.JsonOutput().toJson([
+        path: "/",
+        method: "UNSUBSCRIBE",
+        body: ""
+    ])
+
+    log.debug "Unsubscribing from DSA: ${json}"
+
+    bridge.deviceNotification(json)
+}
+
+//recieve an update from the bridge
+def lanResponseHandler(evt) {
+    def msg = parseLanMessage(evt.stringValue)
+    log.debug "got lan evt: ${msg}"
+	def json = new JsonSlurper().parseText(msg.body)
+    
+    def path = json.path
+    path = path.charAt(0) == '/' ? path.substring(1) : path
+    def arr = path.split("/")
+    def deviceName = arr[0]
+    def attr = arr[1]
+    settings.each { capName, devs ->
+    	devs.each{ device ->
+        	//log.debug "DEBUG : ${device.displayName}"
+        	if (device.displayName == deviceName) {
+            	if (device.getSupportedCommands().any {it.name == "setStatus"}) {
+            		log.debug "Setting state ${attr} = ${json.value}"
+            		device.setStatus(attr, json.value)
+            		state.ignoreEvent = json;
+                }
+                def capability = CAPABILITY_MAP."$capName"
+                if (capability.containsKey("action")) {
+                    def action = capability["action"]
+                    // Yes, this is calling the method dynamically
+                    "$action"(device, json.type, json.value)
+                }
+            }
+        }
+    }
+    //DEVICE_LIST.findAll( { it.displayName == deviceName} ).each {
+    	//def device = it
+    	//if (device.getSupportedCommands().any {it.name == "setStatus"}) {
+       // 	log.debug "Setting state ${attr} = ${json.value}"
+       //     device.setStatus(attr, json.value)
+       //     state.ignoreEvent = json;
+       // }  
+   // }
 }
 
 // Receive an event from the bridge
@@ -565,6 +619,8 @@ def bridgeHandler(evt) {
     //    }
     //    return
     //}
+    
+    
 
     // @NOTE this is stored AWFUL, we need a faster lookup table
     // @NOTE this also has no fast fail, I need to look into how to do that
@@ -605,6 +661,7 @@ def inputHandler(evt) {
     }
     else {
         def json = new JsonOutput().toJson([
+        	method: "PUT",
             path: "/" + evt.device.displayName + "/" + evt.name,
             body: [
             	'$type': "string",

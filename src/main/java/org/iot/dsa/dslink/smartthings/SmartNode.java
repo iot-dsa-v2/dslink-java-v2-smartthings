@@ -12,6 +12,7 @@ import org.iot.dsa.node.DSNode;
 public class SmartNode extends DSNode implements DSIMetadata {
     
     private DSMap metadata = new DSMap();
+    private HubNode hub = null;
     
     public void updateTree(String target, DSMap body) {
         if (target.isEmpty() || target.replaceAll("/", "").isEmpty()) {
@@ -24,7 +25,7 @@ public class SmartNode extends DSNode implements DSIMetadata {
                     } else if (key.equals("?value")) {
                         setValue(value);
                     } else {
-                        //set metadata value
+                        metadata.put(key, value);
                     }
                 } else {
                     if (!value.isMap()) {
@@ -34,6 +35,7 @@ public class SmartNode extends DSNode implements DSIMetadata {
                 }
             }
         } else {
+            target = target.charAt(0) == '/' ? target.substring(1) : target;
             String[] arr = target.split("/");
             if (arr.length < 1) {
                 throw new RuntimeException("Malformed target: " + target + " - This should not be possible");
@@ -75,6 +77,13 @@ public class SmartNode extends DSNode implements DSIMetadata {
         for (Entry entry: metadata) {
             bucket.put(entry.getKey(), entry.getValue());
         }
+    }
+    
+    protected HubNode getHub() {
+        if (hub == null) {
+            hub = (HubNode) getAncestor(HubNode.class);
+        }
+        return hub;
     }
 
 }

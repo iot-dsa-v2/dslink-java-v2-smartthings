@@ -60,7 +60,6 @@ public class SmartValueNode extends SmartNode implements DSIValue {
     @Override
     public void onSet(DSIValue value) {
         put(getValueChild(), value);
+        getHub().sendUpdate(this, value);
     }
-
-
 }
