@@ -13,6 +13,7 @@ import org.iot.dsa.io.json.JsonReader;
 import org.iot.dsa.io.json.JsonWriter;
 import org.iot.dsa.node.DSIObject;
 import org.iot.dsa.node.DSIValue;
+import org.iot.dsa.node.DSInfo;
 import org.iot.dsa.node.DSMap;
 import org.iot.dsa.node.DSMap.Entry;
 import okhttp3.MediaType;
@@ -146,7 +147,20 @@ public class HubNode extends SmartNode {
             path = path.substring(rootPath.length());
         }
         String bodyContent = new DSMap().put("path", path).put("value", value.toElement()).toString();
-        
+        sendToHub(bodyContent);
+    }
+    
+    public void sendInvocation(String actionName, DSInfo parent, DSMap parameters) {
+        String path = parent.getNode().getPath();
+        String rootPath = getPath();
+        if (path.startsWith(rootPath)) {
+            path = path.substring(rootPath.length());
+        }
+        String bodyContent = new DSMap().put("path", path).put("action", actionName).put("arguments", parameters.copy()).toString();
+        sendToHub(bodyContent);
+    }
+    
+    private void sendToHub(String bodyContent) {
         for (Entry entry: subscribers) {
             String address = entry.getKey();
             RequestBody body = RequestBody.create(JSON, bodyContent);
@@ -163,8 +177,6 @@ public class HubNode extends SmartNode {
             } catch (IOException e) {
                 warn("Error sending update to subscriber: ", e);
             }
-                   
-            
         }
     }
     

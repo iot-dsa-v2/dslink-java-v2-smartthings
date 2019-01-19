@@ -16,422 +16,364 @@
 import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
 import groovy.transform.Field
- 
-// Massive lookup tree
-@Field CAPABILITY_MAP = [
-    "accelerationSensors": [
-        name: "Acceleration Sensor",
-        capability: "capability.accelerationSensor",
-        attributes: [
-            "acceleration"
+
+@Field COMMAND_MAP = [
+    "setAirConditionerMode": [
+        [
+            "enum": [
+                "auto", 
+                "cool", 
+                "dry", 
+                "coolClean", 
+                "dryClean", 
+                "fanOnly", 
+                "heat", 
+                "heatClean", 
+                "notSupported"
+            ], 
+            "name": "mode", 
+            "type": "enum"
         ]
-    ],
-	"airQualitySensors": [
-		name: "AirQuality Sensor",
-		capability: "capability.airQualitySensor",
-		attributes: [
-			"airQuality"
-		]
-	],
-    "alarm": [
-        name: "Alarm",
-        capability: "capability.alarm",
-        attributes: [
-            "alarm"
-        ],
-        action: "actionAlarm"
-    ],
-    "battery": [
-        name: "Battery",
-        capability: "capability.battery",
-        attributes: [
-            "battery"
+    ], 
+    "setColor": [
+        [
+            "name": "color hue", 
+            "type": "number"
+        ], 
+        [
+            "name": "color saturation", 
+            "type": "number"
+        ], 
+        [
+            "maxLength": 7, 
+            "name": "color hex", 
+            "type": "string"
+        ], 
+        [
+            "maxLength": 3, 
+            "name": "color switch", 
+            "type": "string"
+        ], 
+        [
+            "name": "color level", 
+            "type": "number"
         ]
-    ],
-    "beacon": [
-        name: "Beacon",
-        capability: "capability.beacon",
-        attributes: [
-            "presence"
+    ], 
+    "setColorTemperature": [
+        [
+            "max": 30000, 
+            "min": 1, 
+            "name": "temperature", 
+            "type": "number"
         ]
-    ],
-    "button": [
-        name: "Button",
-        capability: "capability.button",
-        attributes: [
-            "button"
+    ], 
+    "setCoolingSetpoint": [
+        [
+            "max": 10000, 
+            "min": -460, 
+            "name": "setpoint", 
+            "type": "number"
         ]
-    ],
-    "carbonDioxideMeasurement": [
-        name: "Carbon Dioxide Measurement",
-        capability: "capability.carbonDioxideMeasurement",
-        attributes: [
-            "carbonDioxide"
+    ], 
+    "setDishwasherMode": [
+        [
+            "enum": [
+                "auto", 
+                "quick", 
+                "rinse", 
+                "dry"
+            ], 
+            "name": "mode", 
+            "type": "enum"
         ]
-    ],
-    "carbonMonoxideDetector": [
-        name: "Carbon Monoxide Detector",
-        capability: "capability.carbonMonoxideDetector",
-        attributes: [
-            "carbonMonoxide"
+    ], 
+    "setDryerMode": [
+        [
+            "enum": [
+                "regular", 
+                "lowHeat", 
+                "highHeat"
+            ], 
+            "name": "mode", 
+            "type": "enum"
         ]
-    ],
-    "colorControl": [
-        name: "Color Control",
-        capability: "capability.colorControl",
-        attributes: [
-            "hue",
-            "saturation",
-            "color"
-        ],
-        action: "actionColor"
-    ],
-    "colorTemperature": [
-        name: "Color Temperature",
-        capability: "capability.colorTemperature",
-        attributes: [
-            "colorTemperature"
-        ],
-        action: "actionColorTemperature"
-    ],
-    "consumable": [
-        name: "Consumable",
-        capability: "capability.consumable",
-        attributes: [
-            "consumable"
-        ],
-        action: "actionConsumable"
-    ],
-    "contactSensors": [
-        name: "Contact Sensor",
-        capability: "capability.contactSensor",
-        attributes: [
-            "contact"
+    ], 
+    "setFanSpeed": [
+        [
+            "min": 0, 
+            "name": "speed", 
+            "type": "number"
         ]
-    ],
-    "doorControl": [
-        name: "Door Control",
-        capability: "capability.doorControl",
-        attributes: [
-            "door"
-        ],
-        action: "actionOpenClosed"
-    ],
-	"dustSensors": [
-		name: "Dust Sensor",
-		capability: "capability.dustSensor",
-		attributes: [
-			"fineDustLevel",
-			"dustLevel"
-		]
-	],
-    "energyMeter": [
-        name: "Energy Meter",
-        capability: "capability.energyMeter",
-        attributes: [
-            "energy"
+    ], 
+    "setHeatingSetpoint": [
+        [
+            "max": 10000, 
+            "min": -460, 
+            "name": "setpoint", 
+            "type": "number"
         ]
-    ],
-    "garageDoors": [
-        name: "Garage Door Control",
-        capability: "capability.garageDoorControl",
-        attributes: [
-            "door"
-        ],
-        action: "actionOpenClosed"
-    ],
-    "illuminanceMeasurement": [
-        name: "Illuminance Measurement",
-        capability: "capability.illuminanceMeasurement",
-        attributes: [
-            "illuminance"
+    ], 
+    "setHue": [
+        [
+            "min": 0, 
+            "name": "hue", 
+            "type": "number"
         ]
-    ],
-    "imageCapture": [
-        name: "Image Capture",
-        capability: "capability.imageCapture",
-        attributes: [
-            "image"
+    ], 
+    "setInfraredLevel": [
+        [
+            "max": 100, 
+            "min": 0, 
+            "name": "level", 
+            "type": "number"
         ]
-    ],
-    "levels": [
-        name: "Switch Level",
-        capability: "capability.switchLevel",
-        attributes: [
-            "level"
-        ],
-        action: "actionLevel"
-    ],
-    "lock": [
-        name: "Lock",
-        capability: "capability.lock",
-        attributes: [
-            "lock"
-        ],
-        action: "actionLock"
-    ],
-    "mediaController": [
-        name: "Media Controller",
-        capability: "capability.mediaController",
-        attributes: [
-            "activities",
-            "currentActivity"
+    ], 
+    "setInputSource": [
+        [
+            "enum": [
+                "AM", 
+                "CD", 
+                "FM", 
+                "HDMI", 
+                "HDMI1", 
+                "HDMI2", 
+                "HDMI3", 
+                "HDMI4", 
+                "HDMI5", 
+                "HDMI6", 
+                "digitalTv", 
+                "USB", 
+                "YouTube", 
+                "aux", 
+                "bluetooth", 
+                "digital", 
+                "melon", 
+                "wifi"
+            ], 
+            "name": "mode", 
+            "type": "enum"
         ]
-    ],
-    "motionSensors": [
-        name: "Motion Sensor",
-        capability: "capability.motionSensor",
-        attributes: [
-            "motion"
-        ],
-        action: "actionActiveInactive"
-    ],
-    "musicPlayer": [
-        name: "Music Player",
-        capability: "capability.musicPlayer",
-        attributes: [
-            "status",
-            "level",
-            "trackDescription",
-            "trackData",
-            "mute"
-        ],
-        action: "actionMusicPlayer"
-    ],
-    "pHMeasurement": [
-        name: "pH Measurement",
-        capability: "capability.pHMeasurement",
-        attributes: [
-            "pH"
+    ], 
+    "setLevel": [
+        [
+            "max": 100, 
+            "min": 0, 
+            "name": "level", 
+            "type": "number"
+        ], 
+        [
+            "min": 0, 
+            "name": "rate", 
+            "type": "number"
         ]
-    ],
-    "powerMeters": [
-        name: "Power Meter",
-        capability: "capability.powerMeter",
-        attributes: [
-            "power"
+    ], 
+    "setLightingMode": [
+        [
+            "enum": [
+                "reading", 
+                "writing", 
+                "computer", 
+                "night"
+            ], 
+            "name": "lightingMode", 
+            "type": "enum"
         ]
-    ],
-    "presenceSensors": [
-        name: "Presence Sensor",
-        capability: "capability.presenceSensor",
-        attributes: [
-            "presence"
-        ],
-        action: "actionPresence"
-    ],
-    "humiditySensors": [
-        name: "Relative Humidity Measurement",
-        capability: "capability.relativeHumidityMeasurement",
-        attributes: [
-            "humidity"
+    ], 
+    "setMachineState": [
+        [
+            "enum": [
+                "pause", 
+                "run", 
+                "stop"
+            ], 
+            "name": "state", 
+            "type": "enum"
         ]
-    ],
-    "relaySwitch": [
-        name: "Relay Switch",
-        capability: "capability.relaySwitch",
-        attributes: [
-            "switch"
-        ],
-        action: "actionOnOff"
-    ],
-    "sceneSwitch": [
-        name: "Scene Switch",
-        capability: "capability.switch",
-        attributes: [
-            "scene"
+    ], 
+    "setMute": [
+        [
+            "enum": [
+                "muted", 
+                "unmuted"
+            ], 
+            "name": "state", 
+            "type": "enum"
         ]
-    ],
-    "shockSensor": [
-        name: "Shock Sensor",
-        capability: "capability.shockSensor",
-        attributes: [
-            "shock"
+    ], 
+    "setOvenMode": [
+        [
+            "enum": [
+                "heating", 
+                "grill", 
+                "warming", 
+                "defrosting"
+            ], 
+            "name": "mode", 
+            "type": "enum"
         ]
-    ],
-    "signalStrength": [
-        name: "Signal Strength",
-        capability: "capability.signalStrength",
-        attributes: [
-            "lqi",
-            "rssi"
+    ], 
+    "setOvenSetpoint": [
+        [
+            "min": 0, 
+            "name": "setpoint", 
+            "type": "number"
         ]
-    ],
-    "sleepSensor": [
-        name: "Sleep Sensor",
-        capability: "capability.sleepSensor",
-        attributes: [
-            "sleeping"
+    ], 
+    "setPlaybackRepeatMode": [
+        [
+            "enum": [
+                "all", 
+                "off", 
+                "one"
+            ], 
+            "name": "mode", 
+            "type": "enum"
         ]
-    ],
-    "smokeDetector": [
-        name: "Smoke Detector",
-        capability: "capability.smokeDetector",
-        attributes: [
-            "smoke"
+    ], 
+    "setPlaybackShuffle": [
+        [
+            "enum": [
+                "disabled", 
+                "enabled"
+            ], 
+            "name": "shuffle", 
+            "type": "enum"
         ]
-    ],
-    "soundSensor": [
-        name: "Sound Sensor",
-        capability: "capability.soundSensor",
-        attributes: [
-            "sound"
+    ], 
+    "setPlaybackStatus": [
+        [
+            "enum": [
+                "pause", 
+                "play", 
+                "stop", 
+                "fast forward", 
+                "rewind"
+            ], 
+            "name": "status", 
+            "type": "enum"
         ]
-    ],
-    "stepSensor": [
-        name: "Step Sensor",
-        capability: "capability.stepSensor",
-        attributes: [
-            "steps",
-            "goal"
+    ], 
+    "setRapidCooling": [
+        [
+            "enum": [
+                "off", 
+                "on"
+            ], 
+            "name": "rapidCooling", 
+            "type": "enum"
         ]
-    ],
-    "switches": [
-        name: "Switch",
-        capability: "capability.switch",
-        attributes: [
-            "switch"
-        ],
-        action: "actionOnOff"
-    ],
-    "soundPressureLevel": [
-        name: "Sound Pressure Level",
-        capability: "capability.soundPressureLevel",
-        attributes: [
-            "soundPressureLevel"
+    ], 
+    "setRefrigerationSetpoint": [
+        [
+            "max": 10000, 
+            "min": -460, 
+            "name": "setpoint", 
+            "type": "number"
         ]
-    ],
-    "tamperAlert": [
-        name: "Tamper Alert",
-        capability: "capability.tamperAlert",
-        attributes: [
-            "tamper"
+    ], 
+    "setRobotCleanerCleaningMode": [
+        [
+            "enum": [
+                "auto", 
+                "part", 
+                "repeat", 
+                "manual", 
+                "stop"
+            ], 
+            "name": "mode", 
+            "type": "enum"
         ]
-    ],
-    "temperatureSensors": [
-        name: "Temperature Measurement",
-        capability: "capability.temperatureMeasurement",
-        attributes: [
-            "temperature"
+    ], 
+    "setRobotCleanerMovement": [
+        [
+            "enum": [
+                "homing", 
+                "idle", 
+                "charging", 
+                "alarm", 
+                "powerOff", 
+                "reserve", 
+                "point", 
+                "after", 
+                "cleaning"
+            ], 
+            "name": "mode", 
+            "type": "enum"
         ]
-    ],
-    "thermostat": [
-        name: "Thermostat",
-        capability: "capability.thermostat",
-        attributes: [
-            "temperature",
-            "heatingSetpoint",
-            "coolingSetpoint",
-            "thermostatSetpoint",
-            "thermostatMode",
-            "thermostatFanMode",
-            "thermostatOperatingState"
-        ],
-        action: "actionThermostat"
-    ],
-    "thermostatCoolingSetpoint": [
-        name: "Thermostat Cooling Setpoint",
-        capability: "capability.thermostatCoolingSetpoint",
-        attributes: [
-            "coolingSetpoint"
-        ],
-        action: "actionCoolingThermostat"
-    ],
-    "thermostatFanMode": [
-        name: "Thermostat Fan Mode",
-        capability: "capability.thermostatFanMode",
-        attributes: [
-            "thermostatFanMode"
-        ],
-        action: "actionThermostatFan"
-    ],
-    "thermostatHeatingSetpoint": [
-        name: "Thermostat Heating Setpoint",
-        capability: "capability.thermostatHeatingSetpoint",
-        attributes: [
-            "heatingSetpoint"
-        ],
-        action: "actionHeatingThermostat"
-    ],
-    "thermostatMode": [
-        name: "Thermostat Mode",
-        capability: "capability.thermostatMode",
-        attributes: [
-            "thermostatMode"
-        ],
-        action: "actionThermostatMode"
-    ],
-    "thermostatOperatingState": [
-        name: "Thermostat Operating State",
-        capability: "capability.thermostatOperatingState",
-        attributes: [
-            "thermostatOperatingState"
+    ], 
+    "setRobotCleanerTurboMode": [
+        [
+            "enum": [
+                "on", 
+                "off", 
+                "silence"
+            ], 
+            "name": "mode", 
+            "type": "enum"
         ]
-    ],
-    "thermostatSetpoint": [
-        name: "Thermostat Setpoint",
-        capability: "capability.thermostatSetpoint",
-        attributes: [
-            "thermostatSetpoint"
+    ], 
+    "setSaturation": [
+        [
+            "min": 0, 
+            "name": "saturation", 
+            "type": "number"
         ]
-    ],
-    "threeAxis": [
-        name: "Three Axis",
-        capability: "capability.threeAxis",
-        attributes: [
-            "threeAxis"
+    ], 
+    "setThermostatFanMode": [
+        [
+            "enum": [
+                "auto", 
+                "circulate", 
+                "followschedule", 
+                "on"
+            ], 
+            "name": "mode", 
+            "type": "enum"
         ]
-    ],
-    "timedSession": [
-        name: "Timed Session",
-        capability: "capability.timedSession",
-        attributes: [
-            "timeRemaining",
-            "sessionStatus"
-        ],
-        action: "actionTimedSession"
-    ],
-    "touchSensor": [
-        name: "Touch Sensor",
-        capability: "capability.touchSensor",
-        attributes: [
-            "touch"
+    ], 
+    "setThermostatMode": [
+        [
+            "enum": [
+                "auto", 
+                "cool", 
+                "eco", 
+                "rush hour", 
+                "emergency heat", 
+                "heat", 
+                "off"
+            ], 
+            "name": "mode", 
+            "type": "enum"
         ]
-    ],
-    "valve": [
-        name: "Valve",
-        capability: "capability.valve",
-        attributes: [
-            "contact"
-        ],
-        action: "actionOpenClosed"
-    ],
-    "voltageMeasurement": [
-        name: "Voltage Measurement",
-        capability: "capability.voltageMeasurement",
-        attributes: [
-            "voltage"
+    ], 
+    "setTvChannel": [
+        [
+            "maxLength": 255, 
+            "name": "channel", 
+            "type": "string"
         ]
-    ],
-    "waterSensors": [
-        name: "Water Sensor",
-        capability: "capability.waterSensor",
-        attributes: [
-            "water"
+    ], 
+    "setVolume": [
+        [
+            "max": 100, 
+            "min": 0, 
+            "name": "volume", 
+            "type": "number"
         ]
-    ],
-    "windowShades": [
-        name: "Window Shade",
-        capability: "capability.windowShade",
-        attributes: [
-            "windowShade"
-        ],
-        action: "actionOpenClosed"
+    ], 
+    "setWasherMode": [
+        [
+            "enum": [
+                "regular", 
+                "heavy", 
+                "rinse", 
+                "spinDry"
+            ], 
+            "name": "mode", 
+            "type": "enum"
+        ]
     ]
 ]
-
-@Field DEVICE_LIST = []
-
  
 definition(
     name: "DSA Bridge",
@@ -450,9 +392,8 @@ preferences {
     }
 
     section ("Input") {
-        CAPABILITY_MAP.each { key, capability ->
-            input key, capability["capability"], title: capability["name"], multiple: true, required: false
-        }
+    	input "sensors", "capability.sensor", title: "Sensors", multiple: true, required: false
+        input "actuators", "capability.actuator", title: "Actuators", multiple: true, required: false
     }
 
     section ("Bridge") {
@@ -481,9 +422,7 @@ def uninstalled() {
 }
 
 def initialize() {
-	settings.each() {
-    	DEVICE_LIST += it.value    
-	}
+    def DEVICE_LIST = settings["sensors"] + settings["actuators"]
 	// Subscribe to new events from devices
     DEVICE_LIST.each { device ->
     	def attrs = device.supportedAttributes
@@ -492,52 +431,36 @@ def initialize() {
         	subscribe(device, attr.name, inputHandler)
             body.put(attr.name, [
                 '$type' : "string",
-                '$writable' : "write",
+                //'$writable' : "write",
                 '?value' : device.currentValue(attr.name)
             ])
         }
+        def commands = device.getSupportedCommands()
+        commands.each { command ->
+        	def params = COMMAND_MAP."$command.name"
+            if (params == null) {
+            	params = []
+            }
+        	body.put(command.name, [
+            	'$invokable' : "read",
+                '$params': params
+            ])
+        }
         def json = new JsonOutput().toJson([
-            path: "/" + device.displayName,
+            path: "/" + java.net.URLEncoder.encode(device.displayName, "UTF-8"),
             body: body
         ])
 
         log.debug "Forwarding device to bridge: ${json}"
         bridge.deviceNotification(json)  
     }
-    //CAPABILITY_MAP.each { key, capability ->
-     //   capability["attributes"].each { attribute ->
-      //      subscribe(settings[key], attribute, inputHandler)
-     //   }
-        
-        //Push initial device states
-   //     settings[key].each {device ->
-   //         def attrs = device.supportedAttributes
-    //        def body = [:]
-    //        attrs.each {attr->
-    //        	body.put(attr.name, [
-     //           	'$type' : "string",
-     //               '$writable' : "write",
-     //               '?value' : device.currentValue(attr.name)
-      //          ])
-     //       }
-      //      def json = new JsonOutput().toJson([
-      //          path: "/" + device.displayName,
-     //           body: body
-     //       ])
-
-     //       log.debug "Forwarding device to bridge: ${json}"
-      //      bridge.deviceNotification(json)
-       // }
-   // }
-
+    
     // Subscribe to events from the bridge
     subscribe(bridge, "message", bridgeHandler)
     log.debug "subscribed to bridge messages"
 
     // Update the bridge
     subscribeBridge()
-    
-    //runEvery1Minute(sendGet)
 }
 
 // Update the bridge"s subscription
@@ -576,76 +499,53 @@ def lanResponseHandler(evt) {
     path = path.charAt(0) == '/' ? path.substring(1) : path
     def arr = path.split("/")
     def deviceName = arr[0]
-    def attr = arr[1]
-    settings.each { capName, devs ->
-    	devs.each{ device ->
-        	//log.debug "DEBUG : ${device.displayName}"
-        	if (device.displayName == deviceName) {
-            	if (device.getSupportedCommands().any {it.name == "setStatus"}) {
-            		log.debug "Setting state ${attr} = ${json.value}"
-            		device.setStatus(attr, json.value)
-            		state.ignoreEvent = json;
+    log.debug "want to invoke ${json.action} on ${deviceName}"
+    def DEVICE_LIST = settings["sensors"] + settings["actuators"]
+    DEVICE_LIST.each { device ->
+    	log.debug "is ${deviceName} == ${device.displayName}?" 
+        if (device.displayName.equals(deviceName)) {
+            if (json.action != null) {
+            	log.debug "want to invoke ${json.action}"
+                if (device.hasCommand(json.action)) {
+                	log.debug "going to invoke ${json.action}"
+                    if ("setColor".equals(json.action)) {
+                        def objParam = [:]
+                        def argmap = json.arguments
+                        argMap.each {name, val ->
+                            objParam.put(name.replaceAll("color ", ""), val)
+                        }
+                        device."$json.action"(objParam)
+                    } else {
+                        def paramDefs = COMMAND_MAP."$json.action"
+                        if (paramDefs == null) {
+                            device."$json.action"()
+                        } else {
+                            def params = [] 
+                            def argmap = json.arguments
+                            paramDefs.each { paramDef ->
+                                def val = argmap."$paramDef.name"
+                                params.add(val)
+                            }
+                            device."$json.action"(*params)
+                        }
+                    }
                 }
-                def capability = CAPABILITY_MAP."$capName"
-                if (capability.containsKey("action")) {
-                    def action = capability["action"]
-                    // Yes, this is calling the method dynamically
-                    "$action"(device, json.type, json.value)
+            } else {
+                def attr = arr[1]
+                if (device.getSupportedCommands().any {it.name == "setStatus"}) {
+                    log.debug "Setting state ${attr} = ${json.value}"
+                    device.setStatus(attr, json.value)
+                    state.ignoreEvent = json;
                 }
             }
         }
     }
-    //DEVICE_LIST.findAll( { it.displayName == deviceName} ).each {
-    	//def device = it
-    	//if (device.getSupportedCommands().any {it.name == "setStatus"}) {
-       // 	log.debug "Setting state ${attr} = ${json.value}"
-       //     device.setStatus(attr, json.value)
-       //     state.ignoreEvent = json;
-       // }  
-   // }
 }
 
 // Receive an event from the bridge
 def bridgeHandler(evt) {
-	log.debug "recieved device event from bridge"
     def json = new JsonSlurper().parseText(evt.value)
-    log.debug "Received device event from bridge: ${json}"
-
-    //if (json.type == "notify") {
-    //    if (json.name == "Contacts") {
-    //        sendNotificationToContacts("${json.value}", recipients)
-    //    } else {
-    //        sendNotificationEvent("${json.value}")
-    //    }
-    //    return
-    //}
-    
-    
-
-    // @NOTE this is stored AWFUL, we need a faster lookup table
-    // @NOTE this also has no fast fail, I need to look into how to do that
-    CAPABILITY_MAP.each { key, capability ->
-        if (capability["attributes"].contains(json.type)) {
-            settings[key].each {device ->
-                if (device.displayName == json.name) {
-                    if (json.command == false) {
-                        if (device.getSupportedCommands().any {it.name == "setStatus"}) {
-                            log.debug "Setting state ${json.type} = ${json.value}"
-                            device.setStatus(json.type, json.value)
-                            state.ignoreEvent = json;
-                        }
-                    }
-                    else {
-                        if (capability.containsKey("action")) {
-                            def action = capability["action"]
-                            // Yes, this is calling the method dynamically
-                            "$action"(device, json.type, json.value)
-                        }
-                    }
-                }
-            }
-        }
-    }
+    log.debug "Received device event from bridge: ${json}"    
 }
 
 // Receive an event from a device
@@ -662,7 +562,7 @@ def inputHandler(evt) {
     else {
         def json = new JsonOutput().toJson([
         	method: "PUT",
-            path: "/" + evt.device.displayName + "/" + evt.name,
+            path: "/" + java.net.URLEncoder.encode(evt.device.displayName, "UTF-8") + "/" + java.net.URLEncoder.encode(evt.name, "UTF-8"),
             body: [
             	'$type': "string",
                 '?value': evt.value,
@@ -671,157 +571,5 @@ def inputHandler(evt) {
 
         log.debug "Forwarding device event to bridge: ${json}"
         bridge.deviceNotification(json)
-    }
-}
-
-// +---------------------------------+
-// | WARNING, BEYOND HERE BE DRAGONS |
-// +---------------------------------+
-// These are the functions that handle incoming messages from MQTT.
-// I tried to put them in closures but apparently SmartThings Groovy sandbox
-// restricts you from running clsures from an object (it's not safe).
-
-def actionAlarm(device, attribute, value) {
-    switch (value) {
-        case "strobe":
-            device.strobe()
-        break
-        case "siren":
-            device.siren()
-        break
-        case "off":
-            device.off()
-        break
-        case "both":
-            device.both()
-        break
-    }
-}
-
-def actionColor(device, attribute, value) {
-    switch (attribute) {
-        case "hue":
-            device.setHue(value as float)
-        break
-        case "saturation":
-            device.setSaturation(value as float)
-        break
-        case "color":
-            def values = value.split(',')
-            def colormap = ["hue": values[0] as float, "saturation": values[1] as float]
-            device.setColor(colormap)
-        break
-    }
-}
-
-def actionOpenClosed(device, attribute, value) {
-    if (value == "open") {
-        device.open()
-    } else if (value == "closed") {
-        device.close()
-    }
-}
-
-def actionOnOff(device, attribute, value) {
-    if (value == "off") {
-        device.off()
-    } else if (value == "on") {
-        device.on()
-    }
-}
-
-def actionActiveInactive(device, attribute, value) {
-    if (value == "active") {
-        device.active()
-    } else if (value == "inactive") {
-        device.inactive()
-    }
-}
-
-def actionThermostat(device, attribute, value) {
-    switch(attribute) {
-        case "heatingSetpoint":
-            device.setHeatingSetpoint(value)
-        break
-        case "coolingSetpoint":
-            device.setCoolingSetpoint(value)
-        break
-        case "thermostatMode":
-            device.setThermostatMode(value)
-        break
-        case "thermostatFanMode":
-            device.setThermostatFanMode(value)
-        break
-    }
-}
-
-def actionMusicPlayer(device, attribute, value) {
-    switch(attribute) {
-        case "level":
-            device.setLevel(value)
-        break
-        case "mute":
-            if (value == "muted") {
-                device.mute()
-            } else if (value == "unmuted") {
-                device.unmute()
-            }
-        break
-        case "status":
-            if (device.getSupportedCommands().any {it.name == "setStatus"}) {
-                device.setStatus(value)
-            }
-        break
-    }
-}
-
-def actionColorTemperature(device, attribute, value) {
-    device.setColorTemperature(value as int)
-}
-
-def actionLevel(device, attribute, value) {
-    device.setLevel(value as int)
-}
-
-def actionPresence(device, attribute, value) {
-    if (value == "present") {
-    	device.arrived();
-    }
-    else if (value == "not present") {
-    	device.departed();
-    }
-}
-
-def actionConsumable(device, attribute, value) {
-    device.setConsumableStatus(value)
-}
-
-def actionLock(device, attribute, value) {
-    if (value == "locked") {
-        device.lock()
-    } else if (value == "unlocked") {
-        device.unlock()
-    }
-}
-
-def actionCoolingThermostat(device, attribute, value) {
-    device.setCoolingSetpoint(value)
-}
-
-def actionThermostatFan(device, attribute, value) {
-    device.setThermostatFanMode(value)
-}
-
-def actionHeatingThermostat(device, attribute, value) {
-    device.setHeatingSetpoint(value)
-}
-
-def actionThermostatMode(device, attribute, value) {
-    device.setThermostatMode(value)
-}
-
-def actionTimedSession(device, attribute, value) {
-    if (attribute == "timeRemaining") {
-        device.setTimeRemaining(value)
     }
 }

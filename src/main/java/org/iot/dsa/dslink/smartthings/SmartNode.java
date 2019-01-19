@@ -1,6 +1,11 @@
 package org.iot.dsa.dslink.smartthings;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import org.iot.dsa.node.DSElement;
 import org.iot.dsa.node.DSIMetadata;
 import org.iot.dsa.node.DSIObject;
@@ -13,6 +18,14 @@ public class SmartNode extends DSNode implements DSIMetadata {
     
     private DSMap metadata = new DSMap();
     private HubNode hub = null;
+    private DSInfo actionDefNode = getInfo("ACTION_DEFINITIONS");
+    private Map<String, SmartAction> virtActions = new HashMap<String, SmartAction>();
+    
+    @Override
+    protected void declareDefaults() {
+        super.declareDefaults();
+        declareDefault("ACTION_DEFINITIONS", new DSNode()).setPrivate(true);
+    }
     
     public void updateTree(String target, DSMap body) {
         if (target.isEmpty() || target.replaceAll("/", "").isEmpty()) {
@@ -40,27 +53,36 @@ public class SmartNode extends DSNode implements DSIMetadata {
             if (arr.length < 1) {
                 throw new RuntimeException("Malformed target: " + target + " - This should not be possible");
             }
-            String childName = arr[0];
+            String childName;
+            try {
+                childName = URLDecoder.decode(arr[0], "UTF-8");
+            } catch (UnsupportedEncodingException e) {
+                throw new RuntimeException("Unsupported Encoding exception", e);
+            }
             target = String.join("/", Arrays.asList(arr).subList(1, arr.length));
             DSIObject child = get(childName);
-            SmartNode childNode;
-            if ((target.isEmpty() || target.replaceAll("/", "").isEmpty()) && body.contains("$type")) {
+            SmartNode childEntity;
+            boolean atLeaf = target.isEmpty() || target.replaceAll("/", "").isEmpty();
+            if (atLeaf && body.contains("$invokable")) {
+                actionDefNode.getNode().put(childName, body.copy()).setPrivate(true);
+                return;
+            } else if (atLeaf && body.contains("$type")) {
                 if (child instanceof SmartValueNode) {
-                    childNode = (SmartValueNode) child;
+                    childEntity = (SmartValueNode) child;
                 } else {
-                    DSInfo childInfo = put(childName, new SmartValueNode());
-                    childNode = (SmartValueNode) childInfo.getNode();
+                    childEntity = new SmartValueNode();
+                    put(childName, (SmartValueNode) childEntity).setReadOnly(true);
                 }
             } else {
                 if (child instanceof SmartNode) {
-                    childNode = (SmartNode) child;
-                } else { 
-                    DSInfo childInfo = put(childName, new SmartNode());
-                    childNode = (SmartNode) childInfo.getNode();
+                    childEntity = (SmartNode) child;
+                } else {
+                    childEntity = new SmartNode();
+                    put(childName, (SmartNode) childEntity);
                 }
             }
             
-            childNode.updateTree(target, body);
+            childEntity.updateTree(target, body);
         }
     }
     
@@ -70,6 +92,40 @@ public class SmartNode extends DSNode implements DSIMetadata {
     
     protected void setValue(DSElement value) {
         //Override point
+    }
+    
+    @Override
+    public void getVirtualActions(DSInfo target, Collection<String> bucket) {
+        super.getVirtualActions(target, bucket);
+        if (target == getInfo()) {
+            for (DSInfo child: actionDefNode.getNode()) {
+                if (child.isValue()) {
+                    DSElement val = child.getValue().toElement();
+                    if (val.isMap()) {
+                        bucket.add(child.getName());
+                    }
+                }
+            }
+        }
+    }
+    
+    @Override
+    public DSInfo getVirtualAction(DSInfo target, String name) {
+        if (target == getInfo()) {
+            SmartAction act = virtActions.get(name);
+            if (act == null) {
+                DSIObject obj = actionDefNode.getNode().get(name);
+                if (obj instanceof DSMap) {
+                    DSMap actionDefn = (DSMap) obj;
+                    act = new SmartAction(getHub(), name, actionDefn);
+                    virtActions.put(name, act);
+                }
+            }
+            if (act != null) {
+                return actionInfo(name, act);
+            }
+        }
+        return super.getVirtualAction(target, name);
     }
 
     @Override
