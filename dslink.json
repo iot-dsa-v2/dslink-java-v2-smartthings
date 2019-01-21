@@ -1,6 +1,6 @@
 {
   "name": "dslink-java-v2-smartthings",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "dsa-version": "2.0",
   "description": "SmartThings Link",
   "main": "bin/dslink-java-v2-smartthings",

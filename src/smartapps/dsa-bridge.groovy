@@ -421,10 +421,14 @@ def uninstalled() {
 	unsubscribeBridge()
 }
 
+def allDevices() {
+	def sensors = settings["sensors"] != null ? settings["sensors"] : []
+    return settings["actuators"] != null ? sensors + settings["actuators"] : sensors
+}
+
 def initialize() {
-    def DEVICE_LIST = settings["sensors"] + settings["actuators"]
 	// Subscribe to new events from devices
-    DEVICE_LIST.each { device ->
+    allDevices().each { device ->
     	def attrs = device.supportedAttributes
         def body = [:]
     	attrs.each { attr ->
@@ -500,8 +504,7 @@ def lanResponseHandler(evt) {
     def arr = path.split("/")
     def deviceName = arr[0]
     log.debug "want to invoke ${json.action} on ${deviceName}"
-    def DEVICE_LIST = settings["sensors"] + settings["actuators"]
-    DEVICE_LIST.each { device ->
+    allDevices().each { device ->
     	log.debug "is ${deviceName} == ${device.displayName}?" 
         if (device.displayName.equals(deviceName)) {
             if (json.action != null) {
