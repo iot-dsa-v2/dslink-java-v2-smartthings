@@ -53,7 +53,7 @@ public class SmartValueNode extends SmartNode implements DSIValue {
     public void onChildChanged(DSInfo child) {
         DSInfo info = getValueChild();
         if (child == info) {
-            fire(VALUE_CHANGED, null);
+            fire(VALUE_CHANGED_EVENT, null, null);
         }
     }
 

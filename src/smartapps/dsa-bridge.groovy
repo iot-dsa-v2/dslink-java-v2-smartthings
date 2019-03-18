@@ -502,7 +502,7 @@ def lanResponseHandler(evt) {
     def path = json.path
     path = path.charAt(0) == '/' ? path.substring(1) : path
     def arr = path.split("/")
-    def deviceName = arr[0]
+    def deviceName = URLDecoder.decode(arr[0], "UTF-8")
     log.debug "want to invoke ${json.action} on ${deviceName}"
     allDevices().each { device ->
     	log.debug "is ${deviceName} == ${device.displayName}?" 

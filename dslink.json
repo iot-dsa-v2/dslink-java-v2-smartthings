@@ -1,6 +1,6 @@
 {
   "name": "dslink-java-v2-smartthings",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "dsa-version": "2.0",
   "description": "SmartThings Link",
   "main": "bin/dslink-java-v2-smartthings",
@@ -12,8 +12,13 @@
     "log": {
       "desc": "all, trace, debug, fine, warn, info, error, admin, fatal, none",
       "type": "enum",
-      "value": "debug"
+      "value": "info"
     },
+    "msgpack": {
+     "help": "Whether or not to use msgpack.  False is helpful for debugging.",
+     "type": "bool",
+     "value": true
+   	},
     "token": {
       "desc": "Authentication token for the broker.",
       "type": "string",

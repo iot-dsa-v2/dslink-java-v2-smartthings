@@ -110,6 +110,7 @@ public class HubNode extends SmartNode {
     public void handleRequest(String target, Request baseRequest, HttpServletRequest request,
             HttpServletResponse response) throws IOException {
         String method = request.getMethod();
+        target = request.getRequestURI();
         if (HttpMethod.POST.toString().equals(method) || HttpMethod.PUT.toString().equals(method)) {
             BufferedReader in = request.getReader();
             JsonReader reader = new JsonReader(in);
