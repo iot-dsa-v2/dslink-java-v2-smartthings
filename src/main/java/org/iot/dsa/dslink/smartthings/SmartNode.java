@@ -36,7 +36,7 @@ public class SmartNode extends DSNode implements DSIMetadata {
                     if (key.equals("$type")) {
                         setValueType(value.toString());
                     } else if (key.equals("?value")) {
-                        setValue(value);
+                        setValue(value.copy());
                     } else {
                         metadata.put(key, value);
                     }

@@ -433,12 +433,9 @@ def initialize() {
         def body = [:]
     	attrs.each { attr ->
         	subscribe(device, attr.name, inputHandler)
-            body.put(attr.name, [
-                '$type' : "string",
-                //'$writable' : "write",
-                '?value' : device.currentValue(attr.name)
-            ])
+            body.put(attr.name, dsaValueNode("string", device.currentValue(attr.name)))
         }
+        body.put("meta", getMeta(device))
         def commands = device.getSupportedCommands()
         commands.each { command ->
         	def params = COMMAND_MAP."$command.name"
@@ -465,6 +462,35 @@ def initialize() {
 
     // Update the bridge
     subscribeBridge()
+}
+
+def getMeta(device) {
+	def meta = [:]	
+	safePutValueNode(meta, "Capabilities", "array", device.getCapabilities()*.getName())
+    safePutValueNode(meta, "Network ID", "string", device.getDeviceNetworkId())
+    safePutValueNode(meta, "ID", "string", device.getId())
+    safePutValueNode(meta, "Label", "string", device.getLabel())
+    safePutValueNode(meta, "Last Activity", "string", device.getLastActivity())
+    safePutValueNode(meta, "Manufacturer Name", "string", device.getManufacturerName())
+    safePutValueNode(meta, "Model Name", "string", device.getModelName())
+    safePutValueNode(meta, "Status", "string", device.getStatus())
+    safePutValueNode(meta, "Name", "string", device.getName())
+    safePutValueNode(meta, "Type Name", "string", device.getTypeName())
+    return meta
+}
+
+def safePutValueNode(body, name, type, value) {
+	if (value != null) {
+    	body.put(name, dsaValueNode(type, value))
+    }
+}
+
+def dsaValueNode(type, value) {
+	return [
+    	'$type' : type,
+        //'$writable' : "write",
+        '?value' : value
+    ]
 }
 
 // Update the bridge"s subscription
@@ -566,10 +592,7 @@ def inputHandler(evt) {
         def json = new JsonOutput().toJson([
         	method: "PUT",
             path: "/" + java.net.URLEncoder.encode(evt.device.displayName, "UTF-8") + "/" + java.net.URLEncoder.encode(evt.name, "UTF-8"),
-            body: [
-            	'$type': "string",
-                '?value': evt.value,
-            ]
+            body: dsaValueNode("string", evt.value)
         ])
 
         log.debug "Forwarding device event to bridge: ${json}"
