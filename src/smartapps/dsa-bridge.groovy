@@ -399,6 +399,10 @@ preferences {
     section ("Bridge") {
         input "bridge", "capability.notification", title: "Notify this Bridge", required: true, multiple: false
     }
+    
+    section("Async?") {
+    	input "async", "bool", title: "Send device info asynchronously", required: true, multiple: false, defaultValue: false
+    }
 }
 
 def installed() {
@@ -427,41 +431,69 @@ def allDevices() {
 }
 
 def initialize() {
-	// Subscribe to new events from devices
-    allDevices().each { device ->
-    	def attrs = device.supportedAttributes
-        def body = [:]
-    	attrs.each { attr ->
-        	subscribe(device, attr.name, inputHandler)
-            body.put(attr.name, dsaValueNode("string", device.currentValue(attr.name)))
-        }
-        body.put("meta", getMeta(device))
-        def commands = device.getSupportedCommands()
-        commands.each { command ->
-        	def params = COMMAND_MAP."$command.name"
-            if (params == null) {
-            	params = []
-            }
-        	body.put(command.name, [
-            	'$invokable' : "read",
-                '$params': params
-            ])
-        }
-        def json = new JsonOutput().toJson([
-            path: "/" + java.net.URLEncoder.encode(device.displayName, "UTF-8"),
-            body: body
-        ])
-
-        log.debug "Forwarding device to bridge: ${json}"
-        bridge.deviceNotification(json)  
-    }
-    
-    // Subscribe to events from the bridge
+	// Subscribe to events from the bridge
     subscribe(bridge, "message", bridgeHandler)
     log.debug "subscribed to bridge messages"
 
     // Update the bridge
     subscribeBridge()
+	// Subscribe to new events from devices
+    def deviceBatch = []
+    def delay = 3
+    allDevices().each { device ->
+        if (async) {
+        	deviceBatch.add(device.getId())
+            if (deviceBatch.size() >= 15) {
+				runIn(delay, forwardDeviceByIds, [overwrite: false, data: [devices: deviceBatch]])
+                deviceBatch = []
+                delay = delay + 1
+			}
+        } else {
+        	forwardDevice(device)
+        }
+    }
+    if (!deviceBatch.isEmpty()) {
+    	runIn(delay, forwardDeviceByIds, [overwrite: false, data: [devices: deviceBatch]])
+    }
+}
+
+def forwardDeviceByIds(data) {
+	log.debug "forwardDeviceById called with ${data}"
+    def deviceIdList = data.devices
+	allDevices().each { device ->
+    	if (deviceIdList.contains(device.getId())) {
+        	forwardDevice(device)
+            return
+        }
+    }
+}
+
+def forwardDevice(device) {
+	def attrs = device.supportedAttributes
+    def body = [:]
+    attrs.each { attr ->
+        subscribe(device, attr.name, inputHandler)
+        body.put(attr.name, dsaValueNode("string", device.currentValue(attr.name)))
+    }
+    body.put("meta", getMeta(device))
+    def commands = device.getSupportedCommands()
+    commands.each { command ->
+        def params = COMMAND_MAP."$command.name"
+        if (params == null) {
+            params = []
+        }
+        body.put(command.name, [
+            '$invokable' : "read",
+            '$params': params
+        ])
+    }
+    def toSend = [
+        path: "/" + java.net.URLEncoder.encode(device.displayName, "UTF-8"),
+        body: body
+    ]
+	def json = new JsonOutput().toJson(toSend)
+    log.debug "Forwarding device to bridge: ${json}"
+    bridge.deviceNotification(json)
 }
 
 def getMeta(device) {
