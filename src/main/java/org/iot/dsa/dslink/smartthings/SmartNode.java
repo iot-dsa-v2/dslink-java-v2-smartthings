@@ -122,7 +122,7 @@ public class SmartNode extends DSNode implements DSIMetadata {
                 }
             }
             if (act != null) {
-                return actionInfo(name, act);
+                return virtualInfo(name, act);
             }
         }
         return super.getVirtualAction(target, name);
